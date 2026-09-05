@@ -68,8 +68,8 @@ class MainProgram(QtWidgets.QMainWindow):
         match try_patch:
             case "not an exe":
                 print("not an exe file") # TODO: proper error handling
-            case "unknown architecture":
-                print("unknown architecture")
+            case "invalid architecture":
+                print("invalid architecture")
             case _:
                 if not self.server_running:
                     self.server_running = True
