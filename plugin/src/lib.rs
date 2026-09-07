@@ -1,3 +1,11 @@
+#![feature(extern_types)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::unreadable_literal)]
+
+pub mod consts;
+pub mod defs;
+pub mod hooks;
+
 use std::{
     backtrace::Backtrace,
     panic::{self, PanicHookInfo},
@@ -22,15 +30,25 @@ stack backtrace:
     );
 }
 
-#[dllmain_rs::entry]
-fn on_process_attach() {
-    panic::set_hook(Box::new(panic_hook));
+#[dllmain_rs::entry(events(process_attach, process_detach))]
+fn on_lifecycle(reason: u32) {
+    match reason {
+        DLL_PROCESS_ATTACH => {
+            panic::set_hook(Box::new(panic_hook));
 
-    w::HWND::NULL
-        .MessageBox(
-            "Hello from the Randomushroom plugin!",
-            "Hello!",
-            co::MB::ICONINFORMATION,
-        )
-        .unwrap();
+            hooks::install();
+
+            w::HWND::NULL
+                .MessageBox(
+                    "Hello from the Randomushroom plugin!",
+                    "Hello!",
+                    co::MB::ICONINFORMATION,
+                )
+                .unwrap();
+        }
+        DLL_PROCESS_DETACH => {
+            hooks::uninstall();
+        }
+        _ => unreachable!(),
+    }
 }
