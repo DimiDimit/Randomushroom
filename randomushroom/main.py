@@ -186,14 +186,14 @@ class RandoClient:
 
     # signals received from game
     def on_begin_task(self, chapter, task_id):
-        task = LEVEL_STRING.format(chapter, task_id)
+        task = LEVEL_STRING.format(chapter + 1, task_id + 1)
 
         if self.game_manager.check_if_task_available(task):
             items = self.game_manager.check_task_gates(task)
             self.send_gate(items)
     
     def on_task_complete(self, chapter, task_id):
-        task = LEVEL_STRING.format(chapter, task_id)
+        task = LEVEL_STRING.format(chapter + 1, task_id + 1)
 
         if self.game_manager.complete_task(task):
             self.send_check(task)
@@ -204,7 +204,7 @@ class RandoClient:
                 self.send_quest_to_tracker(quest_item)
 
     def on_object_collected(self, chapter, task_id, object_id): 
-        task = LEVEL_STRING.format(chapter, task_id)
+        task = LEVEL_STRING.format(chapter + 1, task_id + 1)
 
         if self.game_manager.collect_task_item(task, object_id):
             self.send_check(f"{task}_bonus")

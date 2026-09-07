@@ -120,8 +120,8 @@ class TrackerBuilder:
     def _gather_tasks(self):
         self.all_tasks = []
 
-        def count_chapter(id):
-            self.chapter_counter = id + 1
+        def count_chapter(chapter_id):
+            self.chapter_counter = chapter_id + 1
             self.task_counter = 1
 
         def count_task():
