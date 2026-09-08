@@ -113,12 +113,7 @@ class MainProgram(QtWidgets.QMainWindow):
         ]
 
         for dir_path in folders_to_remove:
-            if dir_path.exists():
-                for item in sorted(dir_path.rglob("*"), reverse = True):
-                    if item.is_file():  item.unlink()
-                    elif item.is_dir(): item.rmdir()
-
-                dir_path.rmdir()
+            if dir_path.exists(): shutil.rmtree(dir_path)
 
     
     def begin_tcp_server(self):

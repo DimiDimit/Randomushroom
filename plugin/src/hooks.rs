@@ -1,25 +1,25 @@
-use std::{any::Any, cell::RefCell, mem, sync::OnceLock};
+use std::{any::Any, cell::RefCell, mem, sync::OnceLock, ffi::c_void};
 
 use neohook::{DetourTransaction, Hook};
 use winsafe::{self as w, co, prelude::*};
 
 use crate::{
     consts::addr::{ADDRESS_BASE, GATE_CHAPTER_VISUAL_OFFSET, GATE_CHAPTER_ACTUAL_OFFSET, COMPLETE_TASK_OFFSET, FIND_OBJECT_OFFSET},
-    defs::{CGame, CUnk, CLevelObject},
+    defs::{CGame, CLevelObject},
 };
 
 thread_local! {
     pub static ACTIVE_HOOKS: RefCell<Vec<Hook>> = const { RefCell::new(Vec::new()) };
 }
 
-static ORIG_COMPLETE_TASK: OnceLock<fn(*mut CUnk)> = OnceLock::new();
+static ORIG_COMPLETE_TASK: OnceLock<fn(c_void)> = OnceLock::new();
 static ORIG_FIND_OBJECT: OnceLock<fn(*mut CGame, *mut CLevelObject)> = OnceLock::new();
 
-extern "C" fn gate_chapter_visual_hook(_unk_class: *mut CUnk, _unk_int: u32) -> bool {true}
+extern "C" fn gate_chapter_visual_hook() -> bool {true}
 
 // extern "C" fn gate_chapter_actual_hook() -> bool {true}
 
-extern "C" fn complete_task_hook(unk_class: *mut CUnk) {
+extern "C" fn complete_task_hook(unk_class: c_void) {
     w::HWND::NULL
         .MessageBox("complete_task_hook before!", "Hook", co::MB::ICONINFORMATION)
         .unwrap();
