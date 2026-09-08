@@ -4,7 +4,7 @@ use neohook::{DetourTransaction, Hook};
 use winsafe::{self as w, co, prelude::*};
 
 use crate::{
-    consts::addr::{ADDRESS_BASE, COMPLETE_TASK_OFFSET, FIND_OBJECT_OFFSET},
+    consts::addr::{ADDRESS_BASE, GATE_CHAPTER_VISUAL_OFFSET, GATE_CHAPTER_ACTUAL_OFFSET, COMPLETE_TASK_OFFSET, FIND_OBJECT_OFFSET},
     defs::{CGame, CUnk, CLevelObject},
 };
 
@@ -14,6 +14,10 @@ thread_local! {
 
 static ORIG_COMPLETE_TASK: OnceLock<fn(*mut CUnk)> = OnceLock::new();
 static ORIG_FIND_OBJECT: OnceLock<fn(*mut CGame, *mut CLevelObject)> = OnceLock::new();
+
+extern "C" fn gate_chapter_visual_hook(_unk_class: *mut CUnk, _unk_int: u32) -> bool {true}
+
+// extern "C" fn gate_chapter_actual_hook() -> bool {true}
 
 extern "C" fn complete_task_hook(unk_class: *mut CUnk) {
     w::HWND::NULL
@@ -55,6 +59,14 @@ pub fn install() {
 
     for (offset, detour, orig) in [
         (
+            GATE_CHAPTER_VISUAL_OFFSET,
+            gate_chapter_visual_hook,
+            None,
+        ), ( // i haven't actually found this yet but i wanna leave it here for when i do
+        //     GATE_CHAPTER_ACTUAL_OFFSET,
+        //     gate_chapter_actual_hook,
+        //     None,
+        // ), (
             COMPLETE_TASK_OFFSET,
             complete_task_hook,
             Some(&ORIG_COMPLETE_TASK),

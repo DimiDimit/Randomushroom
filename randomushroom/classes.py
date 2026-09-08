@@ -265,7 +265,7 @@ class FilePatcher:
         self.directory = (directory / "data")
         self.update_directory = (directory / "update" / "data")
 
-    def replace_level_object_image(self, lvl_name, obj_id, new_img = None):
+    def replace_level_object_image(self, lvl_name, obj_id, new_img = None): # TODO: also do names of objects
         self.looking_for_obj = False
         self.capture_name = False
         self.name_to_capture = None

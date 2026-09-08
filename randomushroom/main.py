@@ -151,7 +151,8 @@ class MainProgram(QtWidgets.QMainWindow):
                     json_payload = json.dumps({"command": command, "args": args})
                     payload = bytearray(len(json_payload).to_bytes(4, 'big'))
                     payload.extend(json_payload.encode("utf-8"))
-                    # TODO: actually send the payload
+                    client_socket.sendall(payload)
+
                 self.client.send_payload = send_size_prefixed_data_chunk
 
                 def receive_data_chunk(size):
@@ -192,6 +193,8 @@ class MainProgram(QtWidgets.QMainWindow):
                     case _: return "invalid architecture"
 
         print(f"{arch} EXE detected")
+
+        self.clean_directory()
 
         shutil.copy(
             str(FILES_DIR / "plugin" / arch / "randomushroom.asi"),
