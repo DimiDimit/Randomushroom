@@ -1,4 +1,4 @@
-use std::{cell::RefCell, mem, sync::OnceLock};
+use std::{any::Any, cell::RefCell, mem, sync::OnceLock};
 
 use neohook::{DetourTransaction, Hook};
 use winsafe::{self as w, co, prelude::*};
@@ -60,30 +60,32 @@ pub fn install() {
     for (offset, detour, orig) in [
         (
             GATE_CHAPTER_VISUAL_OFFSET,
-            gate_chapter_visual_hook,
+            gate_chapter_visual_hook as _,
             None,
         ), ( // i haven't actually found this yet but i wanna leave it here for when i do
         //     GATE_CHAPTER_ACTUAL_OFFSET,
-        //     gate_chapter_actual_hook,
+        //     gate_chapter_actual_hook as _,
         //     None,
         // ), (
             COMPLETE_TASK_OFFSET,
-            complete_task_hook,
+            complete_task_hook as _,
             Some(&ORIG_COMPLETE_TASK),
         ), (
             FIND_OBJECT_OFFSET,
-            find_object_hook,
+            find_object_hook as _,
             Some(&ORIG_FIND_OBJECT),
         ),
-    ] {
+    ] as [(_, *const u8, Option<&dyn Any>); _]
+    {
         let orig_fn = unsafe {
             mem::transmute(
                 session
-                    .attach(main_module_base.byte_add(offset).cast(), detour as _)
+                    .attach(main_module_base.byte_add(offset).cast(), detour)
                     .unwrap(),
             )
         };
         if let Some(orig) = orig {
+            let orig: OnceLock<fn()> = unsafe { mem::transmute(orig) };
             orig.set(orig_fn).unwrap();
         }
     }
