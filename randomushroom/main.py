@@ -63,6 +63,10 @@ class MainProgram(QtWidgets.QMainWindow):
         go_button.clicked.connect(self.start_randomized_game)
         layout.addWidget(go_button, 0, 0)
 
+        go_button = QtWidgets.QPushButton(self.tr("Clean Directory"))
+        go_button.clicked.connect(self.clean_directory)
+        layout.addWidget(go_button, 1, 0)
+
     def start_randomized_game(self):
         if self.game_running:
             return
@@ -90,6 +94,32 @@ class MainProgram(QtWidgets.QMainWindow):
                 game_thread = threading.Thread(target = self.launch_game)
                 game_thread.daemon = True
                 game_thread.start()
+
+    def clean_directory(self):
+        if self.game_running:
+            return
+
+        files_to_remove = [
+            self.game_directory / "randomushroom.asi",
+            self.game_directory / "randomushroom.pdb",
+        ]
+
+        for file_path in files_to_remove:
+            if file_path.exists(): file_path.unlink()
+
+        folders_to_remove = [
+            self.game_directory / "update",
+            self.game_directory / "data" / "objects" / "!!!!!!modded",
+        ]
+
+        for dir_path in folders_to_remove:
+            if dir_path.exists():
+                for item in sorted(dir_path.rglob("*"), reverse = True):
+                    if item.is_file():  item.unlink()
+                    elif item.is_dir(): item.rmdir()
+
+                dir_path.rmdir()
+
     
     def begin_tcp_server(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
