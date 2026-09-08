@@ -1,10 +1,15 @@
+import itertools
 import re
+import shutil
 
+from PIL import Image
+
+from randomushroom.constants import *
 from randomushroom.key_constants import *
 
 
 class GameManager:
-    def __init__(self, game_directory):
+    def build_tracker(self, game_directory):
         tracker_builder = TrackerBuilder(game_directory)
 
         self.tracker_dict = tracker_builder.build_tracking_dict() # for checking which tasks are complete and which key items are attained
@@ -227,25 +232,22 @@ class TrackerBuilder:
 
         bonus_check_ids = {}
 
-        def set_item_id(item_num, item_id):
-            if item_num > self.current_item_num:
-                self.current_item_num = item_num
-                self.current_id = item_id
+        def add_item_id(item_id):
+            self.current_id_set.add(item_id)
 
         for check in self.bonus_checks:
-            self.current_item_num = 0
-            self.current_id = None
+            self.current_id_set = set()
 
             self.file_helper.process_script(
                 file = LEVEL_STRING.format(*check) + ".lvl",
                 commands = {
-                    r"ar_ids(\d+)=(\d+)": set_item_id,
+                    r"ar_ids\d+=(\d+)": add_item_id,
                 },
                 encoding = 'utf-8',
             )
 
-            if self.current_id is not None:
-                output[LEVEL_STRING.format(*check) + "_bonus_id"] = self.current_id
+            obj_id = list(self.current_id_set).pop() # TODO: make this random somehow
+            output[LEVEL_STRING.format(*check) + "_bonus_id"] = obj_id
 
         for quest, quest_dict in KEY_QUESTS.items():
             check = quest_dict["task"]
@@ -253,14 +255,125 @@ class TrackerBuilder:
 
         return output
 
+
+class FilePatcher:
+    def __init__(self):
+        self.file_helper = FileHelper()
+
+    def set_root(self, directory):
+        self.file_helper.set_root(directory / "data")
+        self.directory = (directory / "data")
+        self.update_directory = (directory / "update" / "data")
+
+    def replace_level_object_image(self, lvl_name, obj_id, new_img = None):
+        self.looking_for_obj = False
+        self.capture_name = False
+        self.name_to_capture = None
+        self.captured_name = None
+
+        def look_for_obj_id(line_number = None):
+            self.looking_for_obj = True
+            if self.capture_name and (self.name_to_capture is not None):
+                self.captured_name = self.name_to_capture
+
+            self.capture_name = False
+            self.name_to_capture = None
+        
+        def get_name(obj_name, name_extension, line_number = None):
+            if self.looking_for_obj:
+                self.name_to_capture = {
+                    "filename": obj_name,
+                    "file_ext": name_extension,
+                    "line_num": line_number
+                }
+        
+        def get_id(found_obj_id, line_number = None):
+            if self.looking_for_obj and found_obj_id == obj_id:
+                self.capture_name = True
+
+        self.file_helper.process_script(
+            file = lvl_name + ".lvl",
+            commands = {
+                re.escape("<obj/>"): look_for_obj_id,
+                r"id=(\d+)": get_id,
+                r"name=(\S+)\.(\S+)": get_name,
+            },
+            encoding = 'utf-8',
+            get_line_number = True,
+        )
+        look_for_obj_id()
+
+        if self.captured_name is None: return
+
+        # TODO: add alpha jpg support
+        if new_img is None:
+            new_img = FILES_DIR / "test_img.png"
+
+        obj_dir = self.directory / "objects"
+
+        alpha_jpg = False
+        if self.captured_name["file_ext"] == "tga" and any(obj_dir.rglob(f"_a_{self.captured_name["filename"]}.jpg")):
+            alpha_jpg = True
+
+        self.file_helper.replace_script_lines(
+            file = lvl_name + ".lvl",
+            replacements = [{
+                "line_num": self.captured_name["line_num"],
+                "contents": f"name={new_img.stem}.{self.captured_name["file_ext"]}",
+            }],
+            encoding = 'utf-8',
+            new_root_dir = self.update_directory,
+        )
+
+        img = Image.open(new_img)
+
+        old_file_ext = next(itertools.chain(
+            obj_dir.rglob(f"{self.captured_name["filename"]}.*"),
+            obj_dir.rglob(f"_a_{self.captured_name["filename"]}.*"),
+        )).suffix
+        img_file = obj_dir / "!!!!!!modded" / f"{new_img.stem}{old_file_ext}"
+        img_file.parent.mkdir(parents=True, exist_ok=True)
+        alpha = img.getchannel("A").tobytes()
+
+        if alpha_jpg:
+            img_file = img_file.with_name(f"_a_{img_file.name}")
+
+        if old_file_ext == ".jpg":
+            img = img.convert("RGB")
+
+        img.save(str(img_file))
+
+        if alpha_jpg:
+            with open(img_file, "ab") as jpg:
+                jpg.write(alpha)
+
+
 class FileHelper:
     def set_root(self, directory):
         self.directory = directory
-    
-    def process_script(self, file, commands, encoding = 'utf-16'):
+
+    def replace_script_lines(self, file, replacements, encoding = 'utf-16', new_root_dir = None):
+        if new_root_dir is None: new_root_dir = self.directory
+
+        directory_to_check = self.directory
+
+        file_to_open = next(directory_to_check.rglob(file))
+        with open(file_to_open, "r", encoding = encoding, errors = 'replace') as script:
+            lines = script.readlines()
+
+        for info_dict in replacements:
+            lines[info_dict["line_num"] - 1] = f"{info_dict["contents"]}\n"
+
+        replacement_file = file_to_open.relative_to(directory_to_check)
+        (new_root_dir / replacement_file).parent.mkdir(parents=True, exist_ok=True)
+
+        with open(new_root_dir / replacement_file, "w", encoding = encoding) as new_script:
+            new_script.writelines(lines)
+
+    def process_script(self, file, commands, encoding = 'utf-16', get_line_number = False):
         with open(next(self.directory.rglob(file)), "r", encoding = encoding, errors = 'replace') as script:
             block_comment = False
-            for line in script:
+            for line_number, line in enumerate(script, start = 1):
                 line = line.strip()
                 if "/*" in line: block_comment = True
                 if "*/" in line: block_comment = False
@@ -272,5 +385,5 @@ class FileHelper:
                     if match_expression:
                         args = match_expression.groups()
                         processed_args = [int(a) if a.isdigit() else a for a in args]
-                        function(*processed_args)
+                        function(*processed_args, line_number) if get_line_number else function(*processed_args)
                         break

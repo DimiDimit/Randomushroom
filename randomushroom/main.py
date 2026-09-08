@@ -9,7 +9,7 @@ from pathlib import Path
 
 from PySide6 import QtWidgets, QtGui
 
-from randomushroom.classes import GameManager
+from randomushroom.classes import GameManager, FilePatcher
 from randomushroom.constants import *
 
 def main():
@@ -52,6 +52,9 @@ class MainProgram(QtWidgets.QMainWindow):
         self.game_running = False
         self.server_running = False
 
+        self.file_patcher = FilePatcher()
+        self.game_manager = GameManager()
+
         main = QtWidgets.QWidget()
         layout = QtWidgets.QGridLayout(main)
         self.setCentralWidget(main)
@@ -63,6 +66,9 @@ class MainProgram(QtWidgets.QMainWindow):
     def start_randomized_game(self):
         if self.game_running:
             return
+
+        self.file_patcher.set_root(self.game_directory)
+        self.game_manager.build_tracker(self.game_directory)
 
         try_patch = self.apply_patch()
         match try_patch:
@@ -103,7 +109,7 @@ class MainProgram(QtWidgets.QMainWindow):
                 client_socket.connect((self.server_host, self.server_port))
                 print(f"rando client successfully connected!")
 
-                self.client = RandoClient(self.game_directory, client_socket)
+                self.client = RandoClient(self.game_manager, client_socket)
                 command_dict = {
                     # signals sent from the game
                     "game_begin_task": self.client.on_begin_task,
@@ -168,6 +174,13 @@ class MainProgram(QtWidgets.QMainWindow):
                 str(self.game_directory),
             )
 
+        for level_str, obj_id in list(filter(lambda x: x[0].endswith("bonus_id"), self.game_manager.bonus_dict.items())):
+            self.file_patcher.replace_level_object_image(
+                lvl_name = level_str.removesuffix("_bonus_id"),
+                obj_id   = obj_id,
+                new_img  = None, # TODO: get this info out of AP
+            )
+
     def launch_game(self):
         self.game_running = True
         subprocess.run(
@@ -177,8 +190,8 @@ class MainProgram(QtWidgets.QMainWindow):
         self.game_running = False
 
 class RandoClient:
-    def __init__(self, game_directory, tcp_client_socket):
-        self.game_manager = GameManager(game_directory)
+    def __init__(self, game_manager, tcp_client_socket):
+        self.game_manager = game_manager
         self.tcp_client_socket = tcp_client_socket
 
 
