@@ -85,7 +85,7 @@ pub fn install() {
             )
         };
         if let Some(orig) = orig {
-            let orig: OnceLock<fn()> = unsafe { mem::transmute(orig) };
+            let orig: &OnceLock<fn()> = unsafe { orig.downcast_unchecked_ref() };
             orig.set(orig_fn).unwrap();
         }
     }
