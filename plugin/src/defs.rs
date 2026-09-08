@@ -1,12 +1,13 @@
 unsafe extern "C" {
     pub type CGame;
+    pub type CUnk;
 }
 
 #[non_exhaustive]
 #[repr(C)]
 #[derive(Debug)]
 pub struct CLevelObject {
-    unk0: u32,
+    pad0: u32,
     pub id: u16,
 }
 

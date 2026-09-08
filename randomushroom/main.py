@@ -98,8 +98,6 @@ class MainProgram(QtWidgets.QMainWindow):
                 print(f"client connected at {addr}")
 
     def begin_client(self):
-        # TODO: set up functions for tcp hooks and AP hooks and stuff
-
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
             try:
                 client_socket.connect((self.server_host, self.server_port))
@@ -200,7 +198,7 @@ class RandoClient:
 
             if self.game_manager.complete_quest(task):
                 quest_item = self.game_manager.get_quest_name(task)
-                self.send_item(quest_item)
+                self.send_item_notification(quest_item)
                 self.send_quest_to_tracker(quest_item)
 
     def on_object_collected(self, chapter, task_id, object_id): 
@@ -214,7 +212,7 @@ class RandoClient:
         self.send_payload("rand_main_menu", [])
         self.send_payload("rand_display_text", [f"You cannot play that task right now!\nYou need: {items}"]) # TODO: test and improve
 
-    def send_item(self, item):
+    def send_item_notification(self, item):
         self.send_payload("rand_display_text", [f"You received {item}!"]) # TODO: test and improve
 
 
@@ -233,4 +231,4 @@ class RandoClient:
     # helper functions
     def receive_item(self, item):
         if self.game_manager.receive_item(item):
-            self.send_item(item)
+            self.send_item_notification(item)

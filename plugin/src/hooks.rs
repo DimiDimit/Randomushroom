@@ -4,15 +4,29 @@ use neohook::{DetourTransaction, Hook};
 use winsafe::{self as w, co, prelude::*};
 
 use crate::{
-    consts::addr::{ADDRESS_BASE, FIND_OBJECT_OFFSET},
-    defs::{CGame, CLevelObject},
+    consts::addr::{ADDRESS_BASE, COMPLETE_TASK_OFFSET, FIND_OBJECT_OFFSET},
+    defs::{CGame, CUnk, CLevelObject},
 };
 
 thread_local! {
     pub static ACTIVE_HOOKS: RefCell<Vec<Hook>> = const { RefCell::new(Vec::new()) };
 }
 
+static ORIG_COMPLETE_TASK: OnceLock<fn(*mut CUnk)> = OnceLock::new();
 static ORIG_FIND_OBJECT: OnceLock<fn(*mut CGame, *mut CLevelObject)> = OnceLock::new();
+
+extern "C" fn complete_task_hook(unk_class: *mut CUnk) {
+    w::HWND::NULL
+        .MessageBox("complete_task_hook before!", "Hook", co::MB::ICONINFORMATION)
+        .unwrap();
+
+    let original = ORIG_COMPLETE_TASK.get().unwrap();
+    original(unk_class);
+
+    w::HWND::NULL
+        .MessageBox("complete_task_hook after!", "Hook", co::MB::ICONINFORMATION)
+        .unwrap();
+}
 
 extern "C" fn find_object_hook(game: *mut CGame, object: *mut CLevelObject) {
     w::HWND::NULL
@@ -41,6 +55,10 @@ pub fn install() {
 
     for (offset, detour, orig) in [
         (
+            COMPLETE_TASK_OFFSET,
+            complete_task_hook,
+            Some(&ORIG_COMPLETE_TASK),
+        ), (
             FIND_OBJECT_OFFSET,
             find_object_hook,
             Some(&ORIG_FIND_OBJECT),
