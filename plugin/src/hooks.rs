@@ -5,21 +5,21 @@ use winsafe::{self as w, co, prelude::*};
 
 use crate::{
     consts::addr::{ADDRESS_BASE, GATE_CHAPTER_VISUAL_OFFSET, GATE_CHAPTER_ACTUAL_OFFSET, COMPLETE_TASK_OFFSET, FIND_OBJECT_OFFSET},
-    defs::{CGame, CLevelObject},
+    defs::{CGame, CUnkTask, CLevelObject},
 };
 
 thread_local! {
     pub static ACTIVE_HOOKS: RefCell<Vec<Hook>> = const { RefCell::new(Vec::new()) };
 }
 
-static ORIG_COMPLETE_TASK: OnceLock<fn(c_void)> = OnceLock::new();
+static ORIG_COMPLETE_TASK: OnceLock<fn(*mut CUnkTask)> = OnceLock::new();
 static ORIG_FIND_OBJECT: OnceLock<fn(*mut CGame, *mut CLevelObject)> = OnceLock::new();
 
 extern "C" fn gate_chapter_visual_hook() -> bool {true}
 
 // extern "C" fn gate_chapter_actual_hook() -> bool {true}
 
-extern "C" fn complete_task_hook(unk_class: c_void) {
+extern "C" fn complete_task_hook(unk_class: *mut CUnk) {
     w::HWND::NULL
         .MessageBox("complete_task_hook before!", "Hook", co::MB::ICONINFORMATION)
         .unwrap();

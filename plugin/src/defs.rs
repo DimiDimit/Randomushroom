@@ -1,5 +1,6 @@
 unsafe extern "C" {
     pub type CGame;
+    pub type CUnkTask;
 }
 
 #[non_exhaustive]
