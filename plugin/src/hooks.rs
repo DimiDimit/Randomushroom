@@ -15,11 +15,11 @@ thread_local! {
 static ORIG_COMPLETE_TASK: OnceLock<fn(*mut CUnkTask)> = OnceLock::new();
 static ORIG_FIND_OBJECT: OnceLock<fn(*mut CGame, *mut CLevelObject)> = OnceLock::new();
 
-extern "C" fn gate_chapter_visual_hook() -> bool {true}
+// extern "C" fn gate_chapter_visual_hook() -> bool {true}
 
 // extern "C" fn gate_chapter_actual_hook() -> bool {true}
 
-extern "C" fn complete_task_hook(unk_class: *mut CUnk) {
+extern "C" fn complete_task_hook(unk_class: *mut CUnkTask) {
     w::HWND::NULL
         .MessageBox("complete_task_hook before!", "Hook", co::MB::ICONINFORMATION)
         .unwrap();
@@ -59,10 +59,10 @@ pub fn install() {
 
     for (offset, detour, orig) in [
         (
-            GATE_CHAPTER_VISUAL_OFFSET,
-            gate_chapter_visual_hook as _,
-            None,
-        ), ( // i haven't actually found this yet but i wanna leave it here for when i do
+        //     GATE_CHAPTER_VISUAL_OFFSET,
+        //     gate_chapter_visual_hook as _,
+        //     None,
+        // ), ( // i haven't actually found this yet but i wanna leave it here for when i do
         //     GATE_CHAPTER_ACTUAL_OFFSET,
         //     gate_chapter_actual_hook as _,
         //     None,
