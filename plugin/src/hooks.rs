@@ -1,5 +1,7 @@
 use std::{any::Any, cell::RefCell, mem, sync::OnceLock, ffi::c_void};
 
+use fn_abi::abi;
+use fn_type_alias::type_alias;
 use neohook::{DetourTransaction, Hook};
 use winsafe::{self as w, co, prelude::*};
 
@@ -12,14 +14,21 @@ thread_local! {
     pub static ACTIVE_HOOKS: RefCell<Vec<Hook>> = const { RefCell::new(Vec::new()) };
 }
 
-static ORIG_COMPLETE_TASK: OnceLock<fn(*mut c_void)> = OnceLock::new();
-static ORIG_FIND_OBJECT: OnceLock<fn(*mut CGame, *mut CLevelObject)> = OnceLock::new();
+static ORIG_COMPLETE_TASK: OnceLock<CompleteTaskFn> = OnceLock::new();
+static ORIG_FIND_OBJECT: OnceLock<FindObjectFn> = OnceLock::new();
 
-// extern "C" fn gate_chapter_visual_hook() -> bool {true}
+// #[cfg_attr(target_arch = "x86", abi("thiscall"))]
+// #[cfg_attr(target_arch = "x86_64", abi("C"))]
+// extern fn gate_chapter_visual_hook() -> bool {true}
 
-// extern "C" fn gate_chapter_actual_hook() -> bool {true}
+// #[cfg_attr(target_arch = "x86", abi("thiscall"))]
+// #[cfg_attr(target_arch = "x86_64", abi("C"))]
+// extern fn gate_chapter_actual_hook() -> bool {true}
 
-extern "C" fn complete_task_hook(unk_class: *mut c_void) {
+#[cfg_attr(target_arch = "x86", abi("fastcall"))]
+#[cfg_attr(target_arch = "x86_64", abi("C"))]
+#[type_alias(CompleteTaskFn)]
+extern fn complete_task_hook(unk_class: *mut c_void) {
     w::HWND::NULL
         .MessageBox("complete_task_hook before!", "Hook", co::MB::ICONINFORMATION)
         .unwrap();
@@ -32,7 +41,10 @@ extern "C" fn complete_task_hook(unk_class: *mut c_void) {
         .unwrap();
 }
 
-extern "C" fn find_object_hook(game: *mut CGame, object: *mut CLevelObject) {
+#[cfg_attr(target_arch = "x86", abi("thiscall"))]
+#[cfg_attr(target_arch = "x86_64", abi("C"))]
+#[type_alias(FindObjectFn)]
+extern fn find_object_hook(this: *mut CGame, object: *mut CLevelObject) {
     w::HWND::NULL
         .MessageBox(
             &format!("find_object_hook before! {:#?}", unsafe { &*object }),
@@ -42,7 +54,7 @@ extern "C" fn find_object_hook(game: *mut CGame, object: *mut CLevelObject) {
         .unwrap();
 
     let original = ORIG_FIND_OBJECT.get().unwrap();
-    original(game, object);
+    original(this, object);
 
     w::HWND::NULL
         .MessageBox("find_object_hook after!", "Hook", co::MB::ICONINFORMATION)

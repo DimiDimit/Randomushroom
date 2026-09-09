@@ -18,5 +18,7 @@ lto = true
 
 [dependencies]
 dllmain-rs = "0.1.0"
+fn_abi = "3.0.0"
+fn_type_alias = "0.1.0"
 neohook = "0.13.1"
 winsafe = { version = "0.0.28", features = ["user"] }
