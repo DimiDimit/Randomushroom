@@ -1,4 +1,4 @@
-use std::{any::Any, cell::RefCell, mem, sync::OnceLock, ffi::c_void};
+use std::{cell::RefCell, ffi::c_void, mem, sync::OnceLock};
 
 use fn_abi::abi;
 use fn_type_alias::type_alias;
@@ -6,7 +6,7 @@ use neohook::{DetourTransaction, Hook};
 use winsafe::{self as w, co, prelude::*};
 
 use crate::{
-    consts::addr::{ADDRESS_BASE, GATE_CHAPTER_VISUAL_OFFSET, GATE_CHAPTER_ACTUAL_OFFSET, COMPLETE_TASK_OFFSET, FIND_OBJECT_OFFSET},
+    consts::addr::{ADDRESS_BASE, COMPLETE_TASK_OFFSET, FIND_OBJECT_OFFSET},
     defs::{CGame, CLevelObject},
 };
 
@@ -19,18 +19,28 @@ static ORIG_FIND_OBJECT: OnceLock<FindObjectFn> = OnceLock::new();
 
 // #[cfg_attr(target_arch = "x86", abi("thiscall"))]
 // #[cfg_attr(target_arch = "x86_64", abi("C"))]
-// extern fn gate_chapter_visual_hook() -> bool {true}
+// #[type_alias(GateChapterVisualFn)]
+// extern "C" fn gate_chapter_visual_hook() -> bool {
+//     true
+// }
 
 // #[cfg_attr(target_arch = "x86", abi("thiscall"))]
 // #[cfg_attr(target_arch = "x86_64", abi("C"))]
-// extern fn gate_chapter_actual_hook() -> bool {true}
+// #[type_alias(GateChapterActualFn)]
+// extern "C" fn gate_chapter_actual_hook() -> bool {
+//     true
+// }
 
 #[cfg_attr(target_arch = "x86", abi("fastcall"))]
 #[cfg_attr(target_arch = "x86_64", abi("C"))]
 #[type_alias(CompleteTaskFn)]
-extern fn complete_task_hook(unk_class: *mut c_void) {
+extern "C" fn complete_task_hook(unk_class: *mut c_void) {
     w::HWND::NULL
-        .MessageBox("complete_task_hook before!", "Hook", co::MB::ICONINFORMATION)
+        .MessageBox(
+            "complete_task_hook before!",
+            "Hook",
+            co::MB::ICONINFORMATION,
+        )
         .unwrap();
 
     let original = ORIG_COMPLETE_TASK.get().unwrap();
@@ -44,7 +54,7 @@ extern fn complete_task_hook(unk_class: *mut c_void) {
 #[cfg_attr(target_arch = "x86", abi("thiscall"))]
 #[cfg_attr(target_arch = "x86_64", abi("C"))]
 #[type_alias(FindObjectFn)]
-extern fn find_object_hook(this: *mut CGame, object: *mut CLevelObject) {
+extern "C" fn find_object_hook(this: *mut CGame, object: *mut CLevelObject) {
     w::HWND::NULL
         .MessageBox(
             &format!("find_object_hook before! {:#?}", unsafe { &*object }),
@@ -61,7 +71,6 @@ extern fn find_object_hook(this: *mut CGame, object: *mut CLevelObject) {
         .unwrap();
 }
 
-#[allow(clippy::missing_transmute_annotations)]
 pub fn install() {
     let mut session = DetourTransaction::begin();
     session.update_all_threads();
@@ -69,38 +78,47 @@ pub fn install() {
     let main_module_address = w::HINSTANCE::GetModuleHandle(None).unwrap().ptr();
     let main_module_base = unsafe { main_module_address.byte_sub(ADDRESS_BASE) };
 
-    for (offset, detour, orig) in [
-        (
-        //     GATE_CHAPTER_VISUAL_OFFSET,
-        //     gate_chapter_visual_hook as _,
-        //     None,
-        // ), ( // i haven't actually found this yet but i wanna leave it here for when i do
-        //     GATE_CHAPTER_ACTUAL_OFFSET,
-        //     gate_chapter_actual_hook as _,
-        //     None,
-        // ), (
-            COMPLETE_TASK_OFFSET,
-            complete_task_hook as _,
-            Some(&ORIG_COMPLETE_TASK),
-        ), (
-            FIND_OBJECT_OFFSET,
-            find_object_hook as _,
-            Some(&ORIG_FIND_OBJECT),
-        ),
-    ] as [(_, *const u8, Option<&dyn Any>); _]
-    {
-        let orig_fn = unsafe {
-            mem::transmute(
-                session
-                    .attach(main_module_base.byte_add(offset).cast(), detour)
-                    .unwrap(),
-            )
-        };
-        if let Some(orig) = orig {
-            let orig: &OnceLock<fn()> = unsafe { orig.downcast_unchecked_ref() };
-            orig.set(orig_fn).unwrap();
-        }
+    macro hook {
+        ($offset:expr, $detour:expr, $sig:ty $(,)?) => {
+            {
+                let _: $sig = $detour;
+                unsafe {
+                    mem::transmute::<*mut u8, $sig>(
+                        session
+                            .attach(main_module_base.byte_add($offset).cast(), $detour as _)
+                            .unwrap(),
+                    )
+                }
+            }
+        },
+        ($offset:expr, $detour:expr, $sig:ty, $orig:expr $(,)?) => {
+            let orig_fn = hook!($offset, $detour, $sig);
+            $orig.set(orig_fn).unwrap();
+        },
     }
+    // hook!(
+    //     GATE_CHAPTER_VISUAL_OFFSET,
+    //     gate_chapter_visual_hook,
+    //     GateChapterVisualFn,
+    // );
+    // i haven't actually found this yet but i wanna leave it here for when i do
+    // hook!(
+    //     GATE_CHAPTER_ACTUAL_OFFSET,
+    //     gate_chapter_visual_hook,
+    //     GateChapterActualFn,
+    // );
+    hook!(
+        COMPLETE_TASK_OFFSET,
+        complete_task_hook,
+        CompleteTaskFn,
+        ORIG_COMPLETE_TASK,
+    );
+    hook!(
+        FIND_OBJECT_OFFSET,
+        find_object_hook,
+        FindObjectFn,
+        ORIG_FIND_OBJECT,
+    );
 
     let hooks = session.commit().unwrap();
     ACTIVE_HOOKS.set(hooks);

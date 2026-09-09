@@ -1,4 +1,4 @@
-#![feature(downcast_unchecked)]
+#![feature(decl_macro)]
 #![feature(extern_types)]
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::unreadable_literal)]

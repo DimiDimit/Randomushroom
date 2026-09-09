@@ -15,7 +15,8 @@ pub const GATE_CHAPTER_VISUAL_OFFSET: usize = cfg_select! {
     target_arch = "x86_64" => 0x140022E30,
 };
 
-pub const GATE_CHAPTER_ACTUAL_OFFSET: usize = cfg_select! { // TODO: find
+pub const GATE_CHAPTER_ACTUAL_OFFSET: usize = cfg_select! {
+    // TODO: find
     target_arch = "x86" => 0x00411980,
     target_arch = "x86_64" => 0x140022E30,
 };
