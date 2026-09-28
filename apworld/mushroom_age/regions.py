@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from BaseClasses import Entrance, Region
 
-from .randomushroom.key_constants import *
+from .game_constants import *
 
 if TYPE_CHECKING:
     from .world import MushroomAgeWorld

@@ -5,7 +5,6 @@ from worlds.AutoWorld import World
 
 from . import items, locations, regions, rules, web_world
 from . import options as mushroom_age_options
-from .components import MushroomAgeSettings
 
 class MushroomAgeWorld(World):
     """
@@ -18,7 +17,6 @@ class MushroomAgeWorld(World):
 
     options_dataclass = mushroom_age_options.MushroomAgeOptions
     options: mushroom_age_options.MushroomAgeOptions
-    settings: ClassVar[MushroomAgeSettings]
 
     location_name_to_id = locations.location_names_to_ids()
     item_name_to_id = items.item_names_to_ids()
