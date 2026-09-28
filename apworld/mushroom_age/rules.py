@@ -20,10 +20,14 @@ def set_all_rules(world: MushroomAgeWorld) -> None:
 def set_all_location_rules(world: MushroomAgeWorld) -> None:
     create_gate_dict(world)
 
-def create_gate_dict(world = None):
-    gatekeepers = KEY_ITEMS | KEY_QUESTS | KEY_PHONE_NUMBERS
+def create_gate_dict(world, return_dict = False):
+    gatekeepers = KEY_ITEMS | KEY_QUESTS
+
+    if world.options.phone_numbers: # if phone numbers are in the pool
+        gatekeepers |= KEY_PHONE_NUMBERS
+
     gate_dict = {}
-    name_or_id = "name" if world is not None else "id"
+    name_or_id = "id" if return_dict else "name"
 
     for period in TIME_PERIODS.values():
         gates = []
@@ -43,15 +47,15 @@ def create_gate_dict(world = None):
                 rules_list = []
 
                 if len(gates) == 0:
-                    if world is not None:
+                    if not return_dict:
                         continue
 
-                if world is not None: # if setting locations for world
-                    for rule in gates:
-                        rules_list.append(Has(rule[0], count = rule[1]))
-                else: # if returning a dict
+                if return_dict: # if returning a dict
                     gate_dict[(task[0] - 1) * 100 + (task[1] - 1)] = list(gates)
                     continue
+                else: # if setting locations for world
+                    for rule in gates:
+                        rules_list.append(Has(rule[0], count = rule[1]))
 
                 rule = reduce(operator.and_, rules_list)
 
@@ -62,7 +66,7 @@ def create_gate_dict(world = None):
                     location = world.get_location(LOCATION_NAME_STRING_BONUS.format(*task))
                     world.set_rule(location, rule)
     
-    if world is None:
+    if return_dict:
         return gate_dict
 
 def set_completion_condition(world: MushroomAgeWorld) -> None:

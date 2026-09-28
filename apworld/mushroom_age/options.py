@@ -1,6 +1,14 @@
 from dataclasses import dataclass
 
-from Options import Choice, OptionGroup, PerGameCommonOptions, Range, Toggle
+from Options import Choice, OptionGroup, PerGameCommonOptions, Range, Toggle, DefaultOnToggle
+
+
+class PhoneNumbers(DefaultOnToggle):
+    """
+    Whether certain areas are gated behind phone number items that need to be collected before reaching those areas.
+    """
+
+    display_name = "Use Phone Numbers"
 
 
 class TrapChance(Range):
@@ -17,17 +25,12 @@ class TrapChance(Range):
 
 @dataclass
 class MushroomAgeOptions(PerGameCommonOptions):
+    phone_numbers: PhoneNumbers
     trap_chance: TrapChance
 
 option_groups = [
     OptionGroup(
         "Gameplay Options",
-        [TrapChance],
+        [PhoneNumbers, TrapChance],
     ),
 ]
-
-option_presets = {
-    "annoying": {
-        "trap_chance": 50,
-    },
-}

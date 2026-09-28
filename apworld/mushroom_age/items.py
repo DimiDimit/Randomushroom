@@ -61,7 +61,11 @@ def create_item_with_correct_classification(world: MushroomAgeWorld, name: str) 
 def create_all_items(world: MushroomAgeWorld) -> None:
     item_pool = []
 
-    all_items = KEY_ITEMS | KEY_PHONE_NUMBERS
+    all_items = KEY_ITEMS
+
+    if world.options.phone_numbers: # if phone numbers are in the pool
+        all_items |= KEY_PHONE_NUMBERS
+
     for item in all_items.values():
         item_pool.append(world.create_item(item["name"]))
 
