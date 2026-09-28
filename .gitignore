@@ -195,3 +195,5 @@ debug/
 *.DLL
 *.asi
 *.lib
+
+/game
